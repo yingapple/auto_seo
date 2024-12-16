@@ -1,7 +1,7 @@
 import os
 from config import get_config
 from content_generator import generate_topic_and_metadata, generate_article, load_past_keywords, \
-    generate_keywords, fetch_trending_queries, verify_and_refine_keywords
+    generate_keywords, fetch_trending_queries, verify_and_refine_keywords, save_past_keywords
 from image_generator import generate_image
 from git_manager import push_content_to_repo
 from datetime import datetime
@@ -33,7 +33,8 @@ def main():
     # Step 4: Generate an image using the Replicate API
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     image_filename = f"{timestamp}.webp"
-    image_path = generate_image(
+    
+    image_outputs = generate_image(
         replicate_api_token=cfg['REPLICATE_API_TOKEN'],
         prompt=image_prompt,
         output_dir=cfg['IMAGE_OUTPUT_DIR'],
@@ -41,12 +42,15 @@ def main():
     )
     
     # Update the Markdown content to include the image reference
-    image_relative_path = os.path.relpath(image_path, cfg['TARGET_CONTENT_DIR'])
+    image_relative_path = cfg['IMAGE_OUTPUT_DIR'] + "/" + image_filename
     article_content += f"\n\n![Generated Image](/{image_relative_path})"
     
     # Step 5: Push the article and image to the Git repository
     markdown_filename = f"{timestamp}.md"
     push_content_to_repo(
+        image_filename=image_filename,
+        target_image_dir=cfg['IMAGE_OUTPUT_DIR'],
+        image_outputs=image_outputs,
         git_repo_url=cfg['GIT_REPO_URL'],
         branch=cfg['GIT_BRANCH'],
         username=cfg['GIT_USERNAME'],
@@ -57,6 +61,8 @@ def main():
     )
     
     print(f"Article '{title}' and image '{image_filename}' pushed to {cfg['GIT_REPO_URL']}")
+
+    save_past_keywords(refined_keywords)
 
 if __name__ == "__main__":
     main()

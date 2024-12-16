@@ -20,6 +20,7 @@ def get_config():
         'GIT_EMAIL': os.environ.get('GIT_EMAIL', 'user@example.com'),
         'TARGET_CONTENT_DIR': os.environ.get('TARGET_CONTENT_DIR', 'content'),
         'IMAGE_OUTPUT_DIR': os.environ.get('IMAGE_OUTPUT_DIR', 'public/images/generated'),
-        'TOPIC_PROMPT': os.environ.get('TOPIC_PROMPT', 'Tech industry insights')
+        'TOPIC_PROMPT': os.environ.get('TOPIC_PROMPT', 'Tech industry insights'),
+        'OPENAI_API_BASE_URL': os.environ.get('OPENAI_API_BASE_URL', 'https://api.openai.com/v1')
     }
     return config
