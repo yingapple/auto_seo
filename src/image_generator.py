@@ -13,12 +13,4 @@ def generate_image(replicate_api_token, prompt, output_dir, filename):
     }
     outputs = replicate.run("black-forest-labs/flux-schnell", input=input_data)
 
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Save the image
-    image_path = os.path.join(output_dir, filename)
-    with open(image_path, "wb") as f:
-        f.write(outputs[0].read())
-    
-    return image_path
+    return outputs

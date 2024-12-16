@@ -2,11 +2,13 @@ import openai
 import json
 from datetime import datetime
 from pytrends.request import TrendReq
+from utils import post_process
+import os
 
 # Get OpenAI API key from config
 from config import get_config
 cfg = get_config()
-openai.api_key = cfg['OPENAI_API_KEY']
+client = openai.OpenAI(api_key=cfg['OPENAI_API_KEY'], base_url=cfg['OPENAI_API_BASE_URL'])
 
 def load_past_keywords(path="past_keywords.json"):
     try:
@@ -24,13 +26,19 @@ def fetch_trending_queries(theme):
     Use pytrends to get trending search queries related to the theme from the past 7 days.
     """
     pytrends = TrendReq(hl='en-US', tz=360)
+
+    print(f"Fetching trending queries for theme: {theme}")
+
     pytrends.build_payload([theme], cat=0, timeframe='now 7-d', geo='', gprop='')
-    related_queries = pytrends.related_queries()
-    top_df = related_queries.get(theme, {}).get('top', None)
-    if top_df is not None:
-        top_queries = top_df['query'].tolist()
-        return top_queries[:5] 
-    return []
+    try:
+        related_queries = pytrends.related_queries()
+        top_df = related_queries.get(theme, {}).get('top', None)
+        if top_df is not None:
+            top_queries = top_df['query'].tolist()
+            return top_queries[:5] 
+    except Exception as e:
+        print(f"Error fetching trending queries: {e}")
+        return []
 
 def generate_keywords(theme, past_keywords=None, external_data=None, diversity_factor=0.3):
     """
@@ -80,15 +88,18 @@ Instructions:
         {"role": "system", "content": "You are an experienced SEO analyst integrating multiple data sources."},
         {"role": "user", "content": aux_info}
     ]
-
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
         temperature=0.7,
-        max_tokens=1200
+        max_tokens=1200,
+        response_format={ "type": "json_object" },
     )
     
-    content = response.choices[0].message.content.strip()
+    content = post_process(response.choices[0].message.content.strip())
+    
+    print(f"Generated keywords: {content}")
+
     data = json.loads(content)
     return data
 
@@ -102,9 +113,9 @@ def verify_and_refine_keywords(keywords):
         {"role": "system", "content": "You are an SEO specialist verifying the quality of keywords."},
         {"role": "user", "content": f"""
 Given these keywords:
-Core: {keywords["core_keywords"]}
-Long-tail: {keywords["long_tail_keywords"]}
-LSI: {keywords["lsi_keywords"]}
+core_keywords: {keywords["core_keywords"]}
+long_tail_keywords: {keywords["long_tail_keywords"]}
+lsi_keywords: {keywords["lsi_keywords"]}
 
 1. Remove irrelevant or low-value keywords.
 2. Ensure each category retains at least 3 terms.
@@ -112,14 +123,19 @@ LSI: {keywords["lsi_keywords"]}
         """}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
         temperature=0.5,
-        max_tokens=800
+        max_tokens=800,
+        response_format={ "type": "json_object" },
     )
 
-    refined = json.loads(response.choices[0].message.content.strip())
+    refined = post_process(response.choices[0].message.content.strip())
+    
+    print(f"Refined keywords: {refined}")
+    
+    refined = json.loads(refined)
     return refined
 
 def generate_topic_and_metadata(keywords, theme):
@@ -146,14 +162,18 @@ Return JSON: {{ "topic": "...", "title": "...", "description": "..." }}
         """}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
         temperature=0.7,
-        max_tokens=300
+        max_tokens=1200,
+        response_format={ "type": "json_object" },
     )
 
-    data = json.loads(response.choices[0].message.content.strip())
+    data = json.loads(post_process(response.choices[0].message.content.strip()))
+
+    print(f"Generated topic, title, description: {data}")
+
     return data["topic"], data["title"], data["description"]
 
 def generate_article(title, description, keywords, external_data=None):
@@ -209,7 +229,7 @@ Requirements:
         """}
     ]
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
         temperature=0.7,
@@ -218,11 +238,24 @@ Requirements:
 
     article_content = response.choices[0].message.content.strip()
 
+    article_content = """---
+title: "{title}"
+description: "{description}"
+date: "{date_str}"
+keywords: [{keyword_list_str}]
+---
+""".format(title=title, description=description, date_str=date_str, keyword_list_str=keyword_list_str) + article_content
+
+    print(f"Generated article content: {article_content}")
     # 提取Image Prompt
     lines = article_content.split("\n")
     image_prompt_line = [line for line in lines if line.lower().startswith("image prompt:")]
     image_prompt = image_prompt_line[0].split(":", 1)[1].strip() if image_prompt_line else ""
 
+    # remove image prompt
+    article_content = "\n".join([line for line in lines if not line.lower().startswith("image prompt:")])
+
+    print(f"Generated image prompt: {image_prompt}")
     return article_content, image_prompt
 
 
