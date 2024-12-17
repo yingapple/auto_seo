@@ -43,6 +43,10 @@ def main():
     
     # Update the Markdown content to include the image reference
     image_relative_path = cfg['IMAGE_OUTPUT_DIR'] + "/" + image_filename
+    
+    # remove /public, just for specific github pages
+    image_relative_path = image_relative_path.replace("/public", "")
+    
     article_content += f"\n\n![Generated Image](/{image_relative_path})"
     
     # Step 5: Push the article and image to the Git repository
