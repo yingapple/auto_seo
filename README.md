@@ -22,12 +22,12 @@ This tool automatically:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/my-seo-automation-tool.git
+   git clone https://github.com/yourusername/auto_seo.git
    ```
 
-2.	Install dependencies:
+2. Install dependencies:
    ```bash
-   cd my-seo-automation-tool
+   cd auto_seo
    pip install -r requirements.txt
    ```
 
