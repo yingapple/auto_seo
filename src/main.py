@@ -61,7 +61,11 @@ def main():
         email=cfg['GIT_EMAIL'],
         target_dir=cfg['TARGET_CONTENT_DIR'],
         filename=markdown_filename,
-        content=article_content
+        content=article_content,
+        target_article_json_path=cfg['TARGET_ARTICLE_JSON_PATH'],
+        description=description,
+        title=title,
+        keywords=refined_keywords
     )
     
     print(f"Article '{title}' and image '{image_filename}' pushed to {cfg['GIT_REPO_URL']}")
