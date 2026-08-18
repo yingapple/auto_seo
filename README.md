@@ -1,3 +1,5 @@
+
+
 # My SEO Automation Tool
 
 This tool automatically:
@@ -8,7 +10,7 @@ This tool automatically:
 
 - Fully automated: No need to manually specify topics or titles daily.
 - Uses environment variables for configuration.
-- Minimal dependencies (only `openai` and `git`).
+- Minimal dependencies (`openai`, `pytrends`, `replicate`, and `git`).
 - Suitable for running daily via cron jobs.
 
 ## Requirements
